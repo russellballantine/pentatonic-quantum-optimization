@@ -12,7 +12,10 @@ This repository implements a novel variant of the Quantum Approximate Optimizati
 Equal temperament forces twelve 3:2 perfect fifths to equal seven 2:1 octaves (2⁷ = 128 vs. (3/2)¹² ≈ 129.74). This artificial loop introduces the **Pythagorean Comma**. 
 
 This project bypasses this compromise by mapping couplings to the true physical distance along the infinite logarithmic spiral:
-\[D_{ij} = \left\vert \log_2(f_i) - \log_2(f_j) \right\vert \pmod 1\]
+```math
+D_{ij} = \left\vert \log_2(f_i) - \log_2(f_j) \right\vert \pmod 1
+```
+
 
 ### 2. The Pentatonic Subspace Prior
 Using continued fractions, the rational fraction 3/5 emerges as the first deeply stable, highly accurate structural closure of the spiral. The **Pentatonic Scale** is therefore treated as a fundamental, naturally occurring gauge symmetry. 
