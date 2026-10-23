@@ -79,7 +79,7 @@ def main():
     # 1. Load data and setup matrices independently
     tickers, corr_matrix = fetch_finance_data()
     n_qubits = len(tickers)
-    layers = 2  # Set depth to p=2
+    layers = 4  # Set depth to p=4
     
     print(f"\n📊 System configured for p={layers} layers.")
     
@@ -134,11 +134,12 @@ def main():
             
         return qml.expval(quantum_hamiltonian)
 
-    # 3. Execution & Optimization Loops Setup
-    initial_params_p = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1], dtype=float)  # 6 parameters
-    initial_params_std = np.array([0.1, 0.1, 0.1, 0.1], dtype=float)        # 4 parameters
+        # 3. Execution & Optimization Loops Setup (Upgraded to p=4 parameters)
+    initial_params_p = np.array([0.1] * (layers * 3), dtype=float)    # 12 parameters
+    initial_params_std = np.array([0.1] * (layers * 2), dtype=float)  # 8 parameters
+
     
-    print("🚀 Commencing deep variational optimization loops (p=2)...")
+    print("🚀 Commencing deep variational optimization loops (p=4)...")
     
     res_p = minimize(p_qaoa_circuit, initial_params_p, method="Nelder-Mead", options={'maxiter': 1000})
     res_std = minimize(standard_qaoa_circuit, initial_params_std, method="Nelder-Mead", options={'maxiter': 1000})
@@ -146,7 +147,7 @@ def main():
     
     # 4. Output Research Performance Reports
     print("\n================================================================================")
-    print("                DEEP LAYER BENCHMARK RESULTS (p=2): PORTFOLIO                  ")
+    print("                DEEP LAYER BENCHMARK RESULTS (p=4): PORTFOLIO                  ")
     print("================================================================================")
     print(f"Classical Simulated Annealing Minimum Energy : {sa_energy:.6f}")
     print(f"Standard Unstructured QAOA Expected Energy   : {res_std.fun:.6f} (Iterations: {res_std.nfev})")
