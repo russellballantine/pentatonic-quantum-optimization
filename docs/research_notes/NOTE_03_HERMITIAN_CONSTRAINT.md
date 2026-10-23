@@ -11,22 +11,21 @@ To evaluate the P-QAOA architecture against unidirectional landscapes, the perio
 
 Standard QAOA maintained a clear ground-state advantage, outperforming the open-ladder configuration by **0.920337 energy units**, while the pentatonic landscape maxed out its classical optimization threshold at 1,200 iterations.
 
-## 2. Theoretical Post-Mortem: The Hermiticity Backaction
-A deep-dive analysis of the quantum-to-classical compilation step revealed a fundamental physical constraint: **Standard discrete qubit physics is strictly Hermitian.**
+## 2. Technical Post-Mortem: Classical Graph Mapping vs. Quantum Compilation Artifacts
+A review of the classical-to-quantum compilation pipeline revealed a structural mapping mismatch rather than an algorithmic failure. 
 
-By definition, a DAG represents a non-reversible causal hierarchy path (e.g., Node \(i \rightarrow Node\ j\), but \(Node\ j \not\rightarrow Node\ i\)). This causes the dataset matrix to be entirely upper triangular and asymmetric (\(M_{ij} \neq M_{ji}\)). 
+In classical network analysis, Directed Acyclic Graphs are represented via asymmetric, upper-triangular adjacency matrices (\(M_{ij} \neq M_{ji}\)) to explicitly denote causal direction. However, standard multi-qubit Pauli-Ising tracking wrappers (`qml.Hamiltonian`) are natively designed to process bidirectional, symmetric physical couplings to maintain energy-conserving unitary operations.
 
-However, in standard quantum information processing, physical observables and time-evolution operators must be Hermitian (\(M = M^\dagger\)) to maintain unitary probability conservation. When the asymmetric matrix was mapped to standard Pauli-Z operators:
-
+By passing the raw asymmetric classical DAG matrix directly to the quantum operator compiler:
 ```python
 for i in range(n_qubits):
     for j in range(i + 1, n_qubits):
         obs.append(qml.PauliZ(i) @ qml.PauliZ(j))
 ```
+The compilation layer automatically sampled only the upper-triangular indices and mapped them to bidirectional $Z_i Z_j$ interactions. This implicitly mirrored the weights across the diagonal, effectively flattening our directional DAG back into a bidirectional symmetric network behind the scenes.
 
-The simulator only read the upper triangular couplings ($i < j$) and converted them into standard, bidirectional $Z_i Z_j$ interactions. This implicitly forced the physical landscape to become perfectly symmetric behind the scenes. 
+The performance trap occurred because the **Open Ladder Mixer** was executing a strict unidirectional quantum walk over an energy landscape that the compilation layer had mapped as a two-way street, resulting in severe phase frustration. This highlights the necessity of utilizing distinct directional encoding methods (such as non-Hermitian dilation or clock-shift operators) when dealing with acyclic data topologies.
 
-The quantum simulation effectively transformed a one-way causal stream into a **two-way bidirectional pipeline**. The open-ladder mixer—which was designed to march information strictly forward—encountered severe phase frustration when fighting against the bidirectional energy bonds forced by the Pauli mechanics.
 
 ## 3. Core R&D Conclusions & Native Structural Fit
 Through these initial benchmark phases, we have successfully established the exact operational boundaries of the discrete P-QAOA architecture:
