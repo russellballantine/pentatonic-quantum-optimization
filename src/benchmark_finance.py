@@ -79,9 +79,9 @@ def main():
     # 1. Load data and setup matrices independently
     tickers, corr_matrix = fetch_finance_data()
     n_qubits = len(tickers)
+    layers = 2  # Set depth to p=2
     
-    print("\n📊 Sector ETF Correlation Matrix:")
-    print(pd.DataFrame(corr_matrix, columns=tickers, index=tickers).round(3))
+    print(f"\n📊 System configured for p={layers} layers.")
     
     # Generate pure acoustic landscape prior matrix
     freqs = generate_spiral_fifths_frequencies(n_qubits=n_qubits)
@@ -90,7 +90,7 @@ def main():
     # Classical optimization targets standard combination for benchmarking baseline
     combined_cost_matrix = acoustic_hamiltonian * corr_matrix
     
-    # 2. Convert the combination into a multi-qubit Pauli operator for tracking expectation value
+    # Convert combination into a multi-qubit Pauli operator for tracking expectation value
     obs = []
     coeffs = []
     for i in range(n_qubits):
@@ -102,42 +102,51 @@ def main():
     
     quantum_hamiltonian = qml.Hamiltonian(coeffs, obs)
     
-    # 3. Setup Quantum Simulators
+    # 2. Setup Quantum Simulators
     dev_p = qml.device("default.qubit", wires=n_qubits)
     dev_std = qml.device("default.qubit", wires=n_qubits)
     
-    # Quantum Node for Decoupled P-QAOA
+    # Quantum Node for Decoupled P-QAOA (p=2 layers, 6 parameters)
     @qml.qnode(dev_p)
     def p_qaoa_circuit(params):
-        # Array parameters unpack into [gamma_1, gamma_2, beta]
         for i in range(n_qubits):
             qml.Hadamard(wires=i)
-        # Pass matrices independently so circuit can discover cross-mappings autonomously
-        p_qaoa_layer(params[0], params[1], params[2], corr_matrix, acoustic_hamiltonian, wires=range(n_qubits))
+            
+        # Loop through p=2 layers
+        for p in range(layers):
+            idx = p * 3
+            g1, g2, b = params[idx], params[idx+1], params[idx+2]
+            p_qaoa_layer(g1, g2, b, corr_matrix, acoustic_hamiltonian, wires=range(n_qubits))
+            
         return qml.expval(quantum_hamiltonian)
 
-    # Quantum Node for Standard QAOA
+    # Quantum Node for Standard QAOA (p=2 layers, 4 parameters)
     @qml.qnode(dev_std)
     def standard_qaoa_circuit(params):
-        # Array parameters unpack into [gamma, beta]
         for i in range(n_qubits):
             qml.Hadamard(wires=i)
-        standard_qaoa_layer(params[0], params[1], combined_cost_matrix, wires=range(n_qubits))
+            
+        # Loop through p=2 layers
+        for p in range(layers):
+            idx = p * 2
+            g, b = params[idx], params[idx+1]
+            standard_qaoa_layer(g, b, combined_cost_matrix, wires=range(n_qubits))
+            
         return qml.expval(quantum_hamiltonian)
 
-    # 4. Optimization Frameworks Execution
-    initial_params_p = np.array([0.1, 0.1, 0.1], dtype=float)  # 3 dimensional parameter space
-    initial_params_std = np.array([0.1, 0.1], dtype=float)    # 2 dimensional parameter space
+    # 3. Execution & Optimization Loops Setup
+    initial_params_p = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1], dtype=float)  # 6 parameters
+    initial_params_std = np.array([0.1, 0.1, 0.1, 0.1], dtype=float)        # 4 parameters
     
-    print("\n🚀 Commencing autonomous optimization loops...")
+    print("🚀 Commencing deep variational optimization loops (p=2)...")
     
-    res_p = minimize(p_qaoa_circuit, initial_params_p, method="Nelder-Mead")
-    res_std = minimize(standard_qaoa_circuit, initial_params_std, method="Nelder-Mead")
+    res_p = minimize(p_qaoa_circuit, initial_params_p, method="Nelder-Mead", options={'maxiter': 1000})
+    res_std = minimize(standard_qaoa_circuit, initial_params_std, method="Nelder-Mead", options={'maxiter': 1000})
     sa_energy, sa_state = run_classical_simulated_annealing(combined_cost_matrix)
     
-    # 5. Output Research Performance Reports
+    # 4. Output Research Performance Reports
     print("\n================================================================================")
-    print("                DECOUPLED AUTONOMOUS BENCHMARK RESULTS: PORTFOLIO               ")
+    print("                DEEP LAYER BENCHMARK RESULTS (p=2): PORTFOLIO                  ")
     print("================================================================================")
     print(f"Classical Simulated Annealing Minimum Energy : {sa_energy:.6f}")
     print(f"Standard Unstructured QAOA Expected Energy   : {res_std.fun:.6f} (Iterations: {res_std.nfev})")
@@ -146,11 +155,11 @@ def main():
     
     diff = res_std.fun - res_p.fun
     if diff > 1e-4:
-        print(f"🔥 Success: Decoupled P-QAOA autonomously bypassed the layout trap by {abs(diff):.6f} units.")
+        print(f"🔥 Success: At p=2, decoupled P-QAOA broke the layout bottleneck by {abs(diff):.6f} units!")
     elif abs(diff) <= 1e-4:
-        print("⚖️ Analysis: System constraints yielded identical thresholds for 1 layer.")
+        print("⚖️ Analysis: Both circuits converged to identical spectral thresholds at p=2.")
     else:
-        print(f"⚠️ Analysis: Unstructured framework remains clearer by {abs(diff):.6f} energy fields.")
+        print(f"⚠️ Analysis: Unstructured framework remains lower by {abs(diff):.6f} energy fields.")
 
 if __name__ == "__main__":
     main()
